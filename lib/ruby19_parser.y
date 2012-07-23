@@ -1384,10 +1384,7 @@ rule
                     }
                     compstmt kEND
                     {
-                      vars   = val[2]
-                      body   = val[4]
-                      result = new_iter nil, vars, body
-                      result.line = val[1]
+                      result = new_iter_with_lines val
 
                       self.env.unextend
                     }
@@ -1461,12 +1458,8 @@ rule
                     }
                     compstmt tRCURLY
                     {
-                      # REFACTOR
-                      args   = val[2]
-                      body   = val[4]
-                      result = new_iter nil, args, body
+                      result = new_iter_with_lines val
                       self.env.unextend
-                      result.line = val[1]
                     }
                 | kDO
                     {
@@ -1479,11 +1472,8 @@ rule
                     }
                     compstmt kEND
                     {
-                      args = val[2]
-                      body = val[4]
-                      result = new_iter nil, args, body
+                      result = new_iter_with_lines val
                       self.env.unextend
-                      result.line = val[1]
                     }
 
        case_body: kWHEN

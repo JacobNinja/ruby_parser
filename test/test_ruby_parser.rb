@@ -40,9 +40,10 @@ class RubyParserTestCase < ParseTreeTestCase
     assert_equal emsg, e.message.strip # TODO: why strip?
   end
 
-  def assert_parse_line rb, pt, line
+  def assert_parse_line rb, pt, line, last_line=nil
     assert_parse rb, pt
-    assert_equal line, result.line,   "call should have line number"
+    assert_equal line, result.line, "call should have line number"
+    assert_equal last_line, result.last_line, "call should have last line number" if last_line
   end
 end
 
@@ -492,7 +493,7 @@ module TestRubyParserShared
            s(:lasgn, :a, s(:lit, 42)),
            s(:call, nil, :p, s(:lvar, :a)))
 
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 2
     assert_equal 1, result.lasgn.line, "lasgn should have line number"
     assert_equal 2, result.call.line,  "call should have line number"
 
@@ -513,7 +514,7 @@ module TestRubyParserShared
            s(:masgn, s(:array, s(:lasgn, :x), s(:lasgn, :y))),
            s(:call, s(:lvar, :x), :+, s(:lvar, :y)))
 
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 3
     assert_equal 1, result[1].line,   "call should have line number"
     assert_equal 1, result[2].line,   "masgn should have line number"
     assert_equal 2, result[3].line,   "call should have line number"
@@ -523,10 +524,10 @@ module TestRubyParserShared
     pt = s(:defn, :f, s(:args), s(:nil))
 
     rb = "def f\nend"
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 2
 
     rb = "def f\n\nend"
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 3
   end
 
   def test_parse_line_defn_complex
@@ -536,7 +537,7 @@ module TestRubyParserShared
            s(:lasgn, :y, s(:call, s(:lvar, :y), :*, s(:lit, 2))),
            s(:return, s(:lvar, :y)))
 
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 5
 
     body = result
     assert_equal 2, body.call.line,   "call should have line number"
@@ -552,7 +553,7 @@ module TestRubyParserShared
            s(:masgn, s(:array, s(:lasgn, :x), s(:lasgn, :y))),
            s(:call, s(:lvar, :x), :+, s(:lvar, :y)))
 
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 3
 
     assert_equal 1, result[1].line,   "call should have line number"
     assert_equal 1, result[2].line,   "masgn should have line number"
@@ -567,7 +568,7 @@ module TestRubyParserShared
            s(:masgn, s(:array, s(:lasgn, :x), s(:lasgn, :y))),
            s(:call, s(:lvar, :x), :+, s(:lvar, :y)))
 
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 3
 
     assert_equal 1, result[1].line,   "call should have line number"
     assert_equal 1, result[2].line,   "masgn should have line number"
@@ -583,8 +584,9 @@ module TestRubyParserShared
     CODE
 
     result = processor.parse rb
-    assert_equal 1, result.lasgn.line
-    assert_equal 4, result.call.line
+    assert_equal 4, result.last_line
+    assert_equal 1, result.lasgn.line # result.line
+    assert_equal 4, result.call.line # result.last_line
   end
 
   def test_parse_line_newlines
@@ -608,7 +610,7 @@ module TestRubyParserShared
              s(:return, s(:lit, 42)),
              nil))
 
-    assert_parse_line rb, pt, 1
+    assert_parse_line rb, pt, 1, 5
 
     assert_equal 3, result.if.return.line
     assert_equal 3, result.if.return.lit.line
@@ -978,3 +980,40 @@ class TestRuby19Parser < RubyParserTestCase
   # end
 end
 
+class Ruby19ParserLineTest < RubyParserTestCase
+
+  def setup
+    super
+
+    self.processor = Ruby19Parser.new
+  end
+
+  def assert_lines(rb, begin_line, end_line)
+    result = processor.parse rb
+    assert_equal begin_line, result.line
+    assert_equal end_line, result.last_line
+  end
+
+  def test_class
+    rb = <<-RUBY
+# filler
+class Test
+  def self.method
+    # stuff here
+  end
+end
+    RUBY
+    assert_lines rb, 2, 6
+  end
+
+  def test_defn
+    rb = <<-RUBY
+def method(arg)
+
+  return true
+end
+    RUBY
+    assert_lines rb, 1, 4
+  end
+
+end

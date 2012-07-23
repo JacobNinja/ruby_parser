@@ -630,6 +630,7 @@ module RubyParserStuff
     end
 
     result.line = line
+    result.last_line = val.last.last
     result.comments = self.comments.pop
     result
   end
@@ -637,6 +638,7 @@ module RubyParserStuff
   def new_compstmt val
     result = void_stmts(val.grep(Sexp)[0])
     result = remove_begin(result) if result
+    result.last_line ||= (result.last.last_line || result.last.line) if result && result.last.is_a?(Sexp)
     result
   end
 
@@ -655,6 +657,7 @@ module RubyParserStuff
     end
 
     result.line = line
+    result.last_line = val.last.last
     result.comments = self.comments.pop
     result
   end
@@ -695,6 +698,14 @@ module RubyParserStuff
     result << call if call
     result << args
     result << body if body
+    result
+  end
+
+  def new_iter_with_lines val
+    _, line, args, _, body = val
+    result = new_iter nil, args, body
+    result.line = line
+    result.last_line = val.last.last if val.last.is_a? Array
     result
   end
 
@@ -1233,6 +1244,7 @@ end
 
 class Sexp
   attr_writer :paren
+  attr_accessor :last_line
 
   def paren
     @paren ||= false
